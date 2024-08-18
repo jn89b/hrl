@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # #load the model
     # model = PPO.load(model_name, env=environment)
     # test the model
-    num_times = 10
+    num_times = 1000
     num_success = 0
     for i in range(num_times):
         print(f"Test run {i+1}/{num_times}")
