@@ -266,8 +266,10 @@ class HierarchicalEnv(gymnasium.Env):
             print("Max steps reached!")
         elif defensive_done or offensive_done:
             if offensive_done:
+                print("Offensive done!")
                 reward += 10
             if defensive_done:
+                print("Defensive done!")
                 reward -=100
             done = True
         

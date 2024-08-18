@@ -11,11 +11,11 @@ from stable_baselines3.common.env_util import make_vec_env
 if __name__ == "__main__":
 
     # Configuration
-    LOAD_MODEL = False
+    LOAD_MODEL = True
     TOTAL_TIMESTEPS = 500000
     CONTINUE_TRAINING = False
     COMPARE_MODELS = False
-    num_envs = 30  # Number of parallel environments
+    num_envs = 1  # Number of parallel environments
 
     # Function to create environments for parallel execution
     def make_env():
@@ -36,9 +36,12 @@ if __name__ == "__main__":
 
     # Load or initialize the model
     if LOAD_MODEL and not CONTINUE_TRAINING:
-        print("Loading model:", model_name)
-        model = PPO.load(model_name)
-        model.set_env(vec_env)
+        # print("Loading model:", model_name)
+        # model = PPO.load(model_name)
+        # model.set_env(vec_env)
+        environment = HierarchicalEnv()  # Create a single instance of the environment for evaluation
+        #load the model
+        model = PPO.load(model_name, env=environment)
         print("Model loaded.")
     elif LOAD_MODEL and CONTINUE_TRAINING:
         print("Loading model and continuing training:", model_name)
@@ -67,4 +70,31 @@ if __name__ == "__main__":
     # Done with training or evaluation, cleanup resources
     done = False
     # You can now evaluate the trained model
-    # obs = env.reset()
+    #set a random seed for reproducibility
+    rand_seed = 42
+    obs,_ = environment.reset(seed=rand_seed)
+
+    # environment = HierarchicalEnv()  # Create a single instance of the environment for evaluation
+    # #load the model
+    # model = PPO.load(model_name, env=environment)
+    # test the model
+    num_times = 10
+    num_success = 0
+    for i in range(num_times):
+        print(f"Test run {i+1}/{num_times}")
+        obs,_ = environment.reset()
+        done = False
+        while not done:
+            action, _states = model.predict(obs)
+            obs, rewards, done, _, info = environment.step(action)
+            if done:
+                if rewards > 0:
+                    print("Success!")
+                    num_success += 1
+                else:
+                    print("Failed.")
+            # environment.render()
+
+    success_rate = num_success / num_times
+    print(f"Success rate: {success_rate * 100:.2f}%")
+    
