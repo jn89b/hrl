@@ -51,23 +51,41 @@ def load_stable_agents(offensive_env, defensive_env) -> tuple:
     defensive_agent = StablePPO.load(defensive_name, env=defensive_env)
     return offensive_agent, defensive_agent
 
+GRID_SIZE = 10
 # Defensive Policy Environment
 class DefensivePolicyEnv(gymnasium.Env):
     def __init__(self, env_config=None):
         super(DefensivePolicyEnv, self).__init__()
-        self.grid_size = 5
+        self.grid_size = GRID_SIZE
         self.action_space = spaces.Discrete(4)  # 0: up, 1: right, 2: down, 3: left
         self.observation_space = spaces.Box(low=0, high=self.grid_size-1, shape=(4,), dtype=np.int32)
         self.reset()
+        self.current_time = 0
 
     def reset(self, seed=None, options=None):
         self.agent_pos = np.random.randint(0, self.grid_size, size=2)
-        self.enemy_pos = np.random.randint(0, self.grid_size, size=2)
+        # self.enemy_pos = np.random.randint(0, self.grid_size, size=2)
+        rand_x = np.random.randint(0, self.grid_size)
+        rand_y = np.random.randint(0, self.grid_size)
+        
+        # Ensure enemy is not at the same position as the agent
+        if (rand_x, rand_y) == tuple(self.agent_pos):
+            rand_x = (rand_x + 1) % self.grid_size
+            rand_y = (rand_y + 1) % self.grid_size
+        self.enemy_pos = np.array([rand_x, rand_y])
         #make sure type 32
+        self.current_time = 0
         return np.concatenate([self.agent_pos, self.enemy_pos]).astype(np.int32), {}
         # return np.concatenate([self.agent_pos, self.enemy_pos]), {}
 
     def step(self, action):
+        
+        # Move enemy towards agent
+        direction_vector = self.agent_pos - self.enemy_pos
+        move_direction = np.sign(direction_vector)  # Get direction (-1, 0, or 1)
+        self.enemy_pos += move_direction
+        self.enemy_pos = np.clip(self.enemy_pos, 0, self.grid_size - 1)
+        
         # Move agent
         if action == 0:  # up
             self.agent_pos[0] = max(self.agent_pos[0] - 1, 0)
@@ -77,26 +95,32 @@ class DefensivePolicyEnv(gymnasium.Env):
             self.agent_pos[0] = min(self.agent_pos[0] + 1, self.grid_size - 1)
         elif action == 3:  # left
             self.agent_pos[1] = max(self.agent_pos[1] - 1, 0)
-        
-        # Move enemy randomly
-        self.enemy_pos += np.random.choice([-1, 0, 1], size=2)
-        self.enemy_pos = np.clip(self.enemy_pos, 0, self.grid_size - 1)
-        
+                
         obs = np.concatenate([self.agent_pos, self.enemy_pos])
+        
+        distance = np.linalg.norm(self.agent_pos - self.enemy_pos)
+        
         # reward = 1 if not np.array_equal(self.agent_pos, self.enemy_pos) else -10
         if np.array_equal(self.agent_pos, self.enemy_pos):
             # print("Collision!", self.agent_pos, self.enemy_pos)
-            reward = -10
+            reward = -20
         else:
-            reward = 1
+            reward = distance + 1 
+            
+        # Add a small penalty if the agent is within a "danger zone" close to the enemy
+        danger_zone_distance = 2
+        if distance < danger_zone_distance:
+            reward -= 1  # Penalty for being too close to the enemy
+            
         done = np.array_equal(self.agent_pos, self.enemy_pos)
+        
         return obs, reward, done, False, {}
 
 # Offensive Policy Environment
 class OffensivePolicyEnv(gymnasium.Env):
     def __init__(self, env_config=None):
         super(OffensivePolicyEnv, self).__init__()
-        self.grid_size = 5
+        self.grid_size = GRID_SIZE
         self.action_space = spaces.Discrete(4)  # 0: up, 1: right, 2: down, 3: left
         self.observation_space = spaces.Box(low=0, high=self.grid_size-1, shape=(4,), dtype=np.int32)
         # self.reset()
@@ -126,11 +150,12 @@ class OffensivePolicyEnv(gymnasium.Env):
         
         obs = np.concatenate([self.agent_pos, self.target_pos])
         #reward = 10 if np.array_equal(self.agent_pos, self.target_pos) else -1
+        distance_to_target = np.linalg.norm(self.agent_pos - self.target_pos)
         if np.array_equal(self.agent_pos, self.target_pos):
             reward = 10
             done = True
         else:
-            reward = -1
+            reward = -distance_to_target
         
         done = np.array_equal(self.agent_pos, self.target_pos)
         return obs, reward, done, False, {}
@@ -156,7 +181,7 @@ class HierarchicalEnv(gymnasium.Env):
         # the grid size must match the environment
         self.observation_space = spaces.Box(
             low=0,
-            high=self.defensive_env.grid_size - 1,
+            high=GRID_SIZE - 1,
             shape=(6,),
             dtype=np.int32
         )
@@ -222,16 +247,17 @@ class HierarchicalEnv(gymnasium.Env):
         done = False
         if isinstance(policy_choice, tuple):
             policy_choice = policy_choice[0]  # Extract the first element if it's a tuple
-
+            print("Policy choice:", policy_choice)
         # Switch mode based on policy_choice
         if policy_choice == 0:
             self.switch_mode("defensive")
         else:
             self.switch_mode("offensive")
-
-        #just to keep track of policy choices
-        self.policy_choice_history.append(policy_choice)
+        print("policy choice:", policy_choice)
         
+        #just to keep track of policy cho       ices
+        self.policy_choice_history.append(policy_choice)
+
         if self.mode == "defensive":
             if not USE_STABLE:
                 action = self.defensive_agent.compute_single_action(
@@ -263,13 +289,13 @@ class HierarchicalEnv(gymnasium.Env):
         if self.current_step >= self.max_steps:
             done = True
             reward -= 100  # Penalty for exceeding max steps
-            print("Max steps reached!")
+            # print("Max steps reached!")
         elif defensive_done or offensive_done:
             if offensive_done:
-                print("Offensive done!")
-                reward += 10
+                # print("Offensive done!")
+                reward += 100
             if defensive_done:
-                print("Defensive done!")
+                # print("Defensive done!")
                 reward -=100
             done = True
         

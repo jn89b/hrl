@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # #load the model
     # model = PPO.load(model_name, env=environment)
     # test the model
-    num_times = 1000
+    num_times = 100
     num_success = 0
     for i in range(num_times):
         print(f"Test run {i+1}/{num_times}")
@@ -97,4 +97,8 @@ if __name__ == "__main__":
 
     success_rate = num_success / num_times
     print(f"Success rate: {success_rate * 100:.2f}%")
-    
+    #plot the policy
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(environment.policy_choice_history)
+    plt.show()

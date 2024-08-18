@@ -11,9 +11,9 @@ from stable_baselines3.common.env_util import make_vec_env
 if __name__ == "__main__":
 
     # Configuration
-    LOAD_MODEL = False
+    LOAD_MODEL = True
     TOTAL_TIMESTEPS = 500000
-    CONTINUE_TRAINING = False
+    CONTINUE_TRAINING = True
     COMPARE_MODELS = False
     num_envs = 30  # Number of parallel environments
 
