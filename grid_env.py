@@ -234,11 +234,13 @@ class HierarchicalEnv(gymnasium.Env):
         
         if self.mode == "defensive":
             if not USE_STABLE:
-                action = self.defensive_agent.compute_single_action(self.get_defensive_obs())
+                action = self.defensive_agent.compute_single_action(
+                    self.get_defensive_obs(), deterministic=True)
             else:
-                action, _states = self.defensive_agent.predict(self.get_defensive_obs())
+                action, _states = self.defensive_agent.predict(
+                    self.get_defensive_obs(), deterministic=True)
         else:
-            if not USE_STABLE:
+            if not USE_STABLE:  
                 action = self.offensive_agent.compute_single_action(self.get_offensive_obs())
             else:
                 action, _states = self.offensive_agent.predict(self.get_offensive_obs())
@@ -250,18 +252,27 @@ class HierarchicalEnv(gymnasium.Env):
         offensive_obs, offensive_reward, offensive_done, _, offensive_info = self.offensive_env.step(action)
         #print("done:", defensive_done, offensive_done)
         #sum the rewards
-        reward = defensive_reward + offensive_reward
+        #reward = defensive_reward + offensive_reward
+        
+        #get distance to target
+        denemy = np.linalg.norm(self.offensive_env.agent_pos - self.offensive_env.target_pos)
+        dgoal = np.linalg.norm(self.defensive_env.agent_pos - self.defensive_env.enemy_pos)
+        
+        reward = denemy - dgoal
+        
         if self.current_step >= self.max_steps:
             done = True
             reward -= 10  # Penalty for exceeding max steps
             print("Max steps reached!")
         elif defensive_done or offensive_done:
+            if offensive_done:
+                reward += 10
             if defensive_done:
-                print("You died!")
+                reward -=100
             done = True
         
         self.current_step += 1
-    
+        
         obs = self._get_combined_obs()
         return obs, reward, done, _, {"defensive_info": defensive_info, "offensive_info": offensive_info} 
 
