@@ -262,7 +262,7 @@ class HierarchicalEnv(gymnasium.Env):
         
         if self.current_step >= self.max_steps:
             done = True
-            reward -= 10  # Penalty for exceeding max steps
+            reward -= 100  # Penalty for exceeding max steps
             print("Max steps reached!")
         elif defensive_done or offensive_done:
             if offensive_done:
