@@ -11,11 +11,11 @@ from stable_baselines3.common.env_util import make_vec_env
 if __name__ == "__main__":
 
     # Configuration
-    LOAD_MODEL = True
+    LOAD_MODEL = False
     TOTAL_TIMESTEPS = 500000
     CONTINUE_TRAINING = False
     COMPARE_MODELS = False
-    num_envs = 1  # Number of parallel environments
+    num_envs = 30  # Number of parallel environments
 
     # Function to create environments for parallel execution
     def make_env():

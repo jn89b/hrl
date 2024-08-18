@@ -253,7 +253,7 @@ class HierarchicalEnv(gymnasium.Env):
             self.switch_mode("defensive")
         else:
             self.switch_mode("offensive")
-        print("policy choice:", policy_choice)
+        # print("policy choice:", policy_choice)
         
         #just to keep track of policy cho       ices
         self.policy_choice_history.append(policy_choice)
@@ -272,17 +272,12 @@ class HierarchicalEnv(gymnasium.Env):
                 action, _states = self.offensive_agent.predict(self.get_offensive_obs())
 
         # Execute the action in the selected environment
-        # obs, reward, done, info = self.current_env.step(action)\
-        # do action to each environment and see what happens
         defensive_obs, defensive_reward, defensive_done, _, defensive_info = self.defensive_env.step(action)
         offensive_obs, offensive_reward, offensive_done, _, offensive_info = self.offensive_env.step(action)
-        #print("done:", defensive_done, offensive_done)
-        #sum the rewards
-        #reward = defensive_reward + offensive_reward
-        
+
         #get distance to target
-        denemy = np.linalg.norm(self.offensive_env.agent_pos - self.offensive_env.target_pos)
-        dgoal = np.linalg.norm(self.defensive_env.agent_pos - self.defensive_env.enemy_pos)
+        denemy = np.linalg.norm(self.offensive_env.agent_pos - self.defensive_env.enemy_pos)
+        dgoal = np.linalg.norm(self.offensive_env.agent_pos - self.offensive_env.target_pos)
         
         reward = denemy - dgoal
         
@@ -292,7 +287,7 @@ class HierarchicalEnv(gymnasium.Env):
             # print("Max steps reached!")
         elif defensive_done or offensive_done:
             if offensive_done:
-                # print("Offensive done!")
+                print("Offensive done!")
                 reward += 100
             if defensive_done:
                 # print("Defensive done!")
