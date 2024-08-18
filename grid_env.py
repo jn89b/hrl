@@ -143,7 +143,7 @@ class HierarchicalEnv(gymnasium.Env):
         self.mode = "defensive"
         
         self.current_step = 0
-        self.max_steps = 100
+        self.max_steps = 100 
         
         self.offensive_agent = None
         self.defensive_agent = None
@@ -184,7 +184,6 @@ class HierarchicalEnv(gymnasium.Env):
         self.offensive_env.reset()
         self.current_step = 0
         # Return combined observations
-        
         # Combine agent's position with target and enemy positions
         # return {"agent_1": self._get_combined_obs()}, {}
         return self._get_combined_obs(), {}
@@ -247,21 +246,16 @@ class HierarchicalEnv(gymnasium.Env):
         # Execute the action in the selected environment
         # obs, reward, done, info = self.current_env.step(action)\
         # do action to each environment and see what happens
-        defensive_obs, defensive_reward, _, defensive_done, defensive_info = self.defensive_env.step(action)
-        offensive_obs, offensive_reward, _, offensive_done, offensive_info = self.offensive_env.step(action)
-        # offensive_pos = self.offensive_env.agent_pos
-        # defensive_pos = self.defensive_env.agent_pos
-        # print(f"Defensive Position: {defensive_pos}, Offensive Position: {offensive_pos}")
-
+        defensive_obs, defensive_reward, defensive_done, _, defensive_info = self.defensive_env.step(action)
+        offensive_obs, offensive_reward, offensive_done, _, offensive_info = self.offensive_env.step(action)
+        #print("done:", defensive_done, offensive_done)
         #sum the rewards
         reward = defensive_reward + offensive_reward
-        
         if self.current_step >= self.max_steps:
             done = True
             reward -= 10  # Penalty for exceeding max steps
+            print("Max steps reached!")
         elif defensive_done or offensive_done:
-            if offensive_done:
-                print("Offensive agent reached the target!")
             if defensive_done:
                 print("You died!")
             done = True
